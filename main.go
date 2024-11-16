@@ -9,7 +9,14 @@ import (
 
 func main() {
 
-	dir, err := os.ReadDir("./source")
+	if len(os.Args) != 3 {
+		log.Fatalf("Usage: %s <source-dir> <destination-dir>", os.Args[0])
+	}
+
+	sourceDir := os.Args[1]
+	destinationDir := os.Args[2]
+
+	dir, err := os.ReadDir(sourceDir)
 	if err != nil {
 		log.Fatalf("FAILED TO READ DIR, %s", err)
 	}
@@ -21,19 +28,19 @@ func main() {
 		if !f.IsDir() {
 			fileName := f.Name()
 			fmt.Println(fileName)
-			folderName := strings.Split(fileName, ".")
-			if len(folderName) == 1 {
+			fileSplit := strings.Split(fileName, ".")
+			if len(fileSplit) == 1 {
 				continue
 			}
-			if _, err := os.Stat("./source/" + folderName[1]); os.IsNotExist(err) {
-
-				err := os.Mkdir(folderName[1], 0755)
+			folderName := destinationDir + "/" + fileSplit[len(fileSplit)-1]
+			if _, err := os.Stat(folderName); os.IsNotExist(err) {
+				err := os.MkdirAll(folderName, 0755)
 				if err != nil {
-					log.Fatalf("FAILDED TO CREAT DIR. %s", err)
+					log.Fatalf("FAILDED TO CREATe DIR. %s", err)
 				}
 			}
-			destination := fmt.Sprintf("%s/%s", "./source/"+folderName[1], fileName)
-			err = os.Rename(fileName, destination)
+			destination := fmt.Sprintf("%s/%s", folderName, fileName)
+			err = os.Rename(sourceDir+"/"+fileName, destination)
 			if err != nil {
 				log.Fatalf("FAILDED TO MOVE. %s", err)
 			}

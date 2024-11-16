@@ -3,4 +3,5 @@ run:
 build:
 	@go build -o bin/fileHandler main.go
 run-prod:
-	@ ./bin/fileHandler
+	@ ./bin/fileHandler ./source ./destination
+
