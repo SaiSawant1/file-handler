@@ -7,7 +7,9 @@ import (
 	"strings"
 )
 
-func HandleFile(src string, des string) {
+func HandleFile(src string, des string, msg chan<- string) {
+
+	msg <- "arranging files please wait..."
 
 	sourceDir := src
 	destinationDir := des
@@ -15,15 +17,17 @@ func HandleFile(src string, des string) {
 	dir, err := os.ReadDir(sourceDir)
 	if err != nil {
 		log.Fatalf("FAILED TO READ DIR, %s", err)
+		msg <- err.Error()
 	}
 	if err != nil {
 		log.Fatalf("FAILED TO READ DIR, %s", err)
+		msg <- err.Error()
 	}
 
 	for _, f := range dir {
 		if !f.IsDir() {
 			fileName := f.Name()
-			fmt.Println(fileName)
+			msg <- fileName
 			fileSplit := strings.Split(fileName, ".")
 			if len(fileSplit) == 1 {
 				continue
@@ -33,14 +37,19 @@ func HandleFile(src string, des string) {
 				err := os.MkdirAll(folderName, 0755)
 				if err != nil {
 					log.Fatalf("FAILDED TO CREATe DIR. %s", err)
+					msg <- err.Error()
 				}
 			}
 			destination := fmt.Sprintf("%s/%s", folderName, fileName)
 			err = os.Rename(sourceDir+"/"+fileName, destination)
 			if err != nil {
 				log.Fatalf("FAILDED TO MOVE. %s", err)
+				msg <- err.Error()
 			}
 
 		}
 	}
+
+	msg <- "Task completed!"
+	close(msg)
 }

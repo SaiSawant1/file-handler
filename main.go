@@ -13,6 +13,14 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+type ViewScreen int
+
+const (
+	HomeScreen ViewScreen = iota
+	CustomScreen
+	FileScreen
+)
+
 type model struct {
 	source      string
 	destination string
@@ -20,29 +28,34 @@ type model struct {
 	options     []string
 	textArea    textarea.Model
 	viewport    viewport.Model
-	selected    int
+	currScreen  ViewScreen
+	msgChannel  chan string
+	outPut      string
 }
 
 func Default() model {
-	options := []string{"use default config", "custom src and destination"}
+	options := []string{"Use default Source and Destination ('./','./')", "Provide a Custom Source and Destination"}
 	ta := textarea.New()
-	ta.Placeholder = "Send a message..."
+	ta.Placeholder = "Pick the sorce and destination..."
 	ta.Focus()
 	ta.Prompt = "┃ "
 	ta.CharLimit = 280
-	ta.SetWidth(30)
-	ta.SetHeight(3)
+	ta.SetWidth(40)
+	ta.SetHeight(1)
 	ta.FocusedStyle.CursorLine = lipgloss.NewStyle()
 	ta.ShowLineNumbers = false
-	vp := viewport.New(30, 4)
-	vp.SetContent("Enter your custom config")
+	vp := viewport.New(100, 1)
 	ta.KeyMap.InsertNewline.SetEnabled(false)
+	msgCh := make(chan string)
 	return model{
 		source:      "./",
 		destination: "./",
 		options:     options,
 		textArea:    ta,
 		viewport:    vp,
+		currScreen:  HomeScreen,
+		msgChannel:  msgCh,
+		outPut:      "",
 	}
 }
 
@@ -61,24 +74,38 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursor--
 			}
 		case "down", "j":
-			if m.cursor < 4 {
+			if m.cursor < 1 {
 				m.cursor++
 			}
 		case "enter":
-			m.selected = m.cursor
-			if m.selected == 1 {
+			switch m.cursor {
+			case 0:
+				m.currScreen = FileScreen
+				go func() {
+					filehandler.HandleFile(m.source, m.destination, m.msgChannel)
+				}()
+			case 1:
+				m.currScreen = CustomScreen
 				m.textArea.View()
-			}
-			input := m.textArea.Value()
-			if len(input) > 1 {
-				m.viewport.SetContent(input)
-				inputValue := strings.Split(input, " ")
-				if len(inputValue) > 1 {
-					filehandler.HandleFile(inputValue[0], inputValue[1])
-				} else {
-					filehandler.HandleFile(inputValue[0], "./")
+				input := m.textArea.Value()
+				if len(input) > 1 {
+					m.viewport.SetContent(input)
+					inputValue := strings.Split(input, " ")
+					if len(inputValue) > 1 {
+						m.source = inputValue[0]
+						m.destination = inputValue[1]
+						m.currScreen = FileScreen
+						go func() {
+							filehandler.HandleFile(m.source, m.destination, m.msgChannel)
+						}()
+					} else {
+						m.source = inputValue[0]
+						m.currScreen = FileScreen
+						go func() {
+							filehandler.HandleFile(m.source, m.destination, m.msgChannel)
+						}()
+					}
 				}
-
 			}
 		default:
 			var cmd tea.Cmd
@@ -97,22 +124,42 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	s := "Please Select an option\n"
 
-	for i, choice := range m.options {
-		cursor := " "
-		if m.cursor == i {
-			cursor = ">"
+	var s string
+
+	switch m.currScreen {
+	case HomeScreen:
+		s += fmt.Sprintf("Please use arrow keys up and down or j and k to navigate:-\n\n")
+		for i, option := range m.options {
+
+			cursor := " "
+			if m.cursor == i {
+				cursor = ">"
+			}
+			checked := " "
+			if int(m.currScreen) == i {
+				checked = "x"
+			}
+			s += fmt.Sprintf("%s [%s] %s\n", cursor, checked, option)
 		}
-		checked := " "
-		if m.selected == i {
-			checked = "x"
+		s += fmt.Sprintf("\npress ctrl+c or q to quite\n")
+	case CustomScreen:
+		m.viewport.SetContent("Please enter space seperated source and destination ('./src ./dest') \n if destination folder is not found the destination folder will be created")
+		s = fmt.Sprintf("%s\n\n%s", m.viewport.View(), m.textArea.View())
+	case FileScreen:
+		m.viewport.SetContent("work in progress..\n")
+
+		select {
+		case val, ok := <-m.msgChannel:
+			if ok {
+				m.outPut += fmt.Sprintf("%s\n", val)
+
+			}
+		default:
 		}
-		s += fmt.Sprintf("%s [%s] %s\n", cursor, checked, choice)
-		if m.selected == 1 {
-			s = fmt.Sprintf("%s\n\n%s", m.viewport.View(), m.textArea.View())
-		}
+		s = m.outPut
 	}
+
 	return s
 }
 
