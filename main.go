@@ -114,7 +114,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case cursor.BlinkMsg:
 		var cmd tea.Cmd
+		select {
+		case val, ok := <-m.msgChannel:
+			if ok {
+				m.outPut += fmt.Sprintf("%s\n", val)
 
+			}
+		default:
+		}
 		m.textArea, cmd = m.textArea.Update(msg)
 		return m, cmd
 
@@ -148,16 +155,7 @@ func (m model) View() string {
 		s = fmt.Sprintf("%s\n\n%s", m.viewport.View(), m.textArea.View())
 	case FileScreen:
 		m.viewport.SetContent("work in progress..\n")
-
-		select {
-		case val, ok := <-m.msgChannel:
-			if ok {
-				m.outPut += fmt.Sprintf("%s\n", val)
-
-			}
-		default:
-		}
-		s = m.outPut
+		s += m.outPut
 	}
 
 	return s
