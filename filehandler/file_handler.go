@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func HandleFile(src string, des string, msg chan<- string) {
+func OrganizeFile(src string, des string, msg chan<- string) {
 
 	msg <- "arranging files please wait..."
 

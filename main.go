@@ -82,7 +82,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case 0:
 				m.currScreen = FileScreen
 				go func() {
-					filehandler.HandleFile(m.source, m.destination, m.msgChannel)
+					filehandler.OrganizeFile(m.source, m.destination, m.msgChannel)
 				}()
 			case 1:
 				m.currScreen = CustomScreen
@@ -96,13 +96,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.destination = inputValue[1]
 						m.currScreen = FileScreen
 						go func() {
-							filehandler.HandleFile(m.source, m.destination, m.msgChannel)
+							filehandler.OrganizeFile(m.source, m.destination, m.msgChannel)
 						}()
 					} else {
 						m.source = inputValue[0]
 						m.currScreen = FileScreen
 						go func() {
-							filehandler.HandleFile(m.source, m.destination, m.msgChannel)
+							filehandler.OrganizeFile(m.source, m.destination, m.msgChannel)
 						}()
 					}
 				}
