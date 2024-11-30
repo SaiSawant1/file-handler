@@ -7,4 +7,7 @@ build-win:
 run-prod:
 	@ ./bin/fileHandler ./source ./destination
 
+test:
+	@go test ./... -v
+
 
